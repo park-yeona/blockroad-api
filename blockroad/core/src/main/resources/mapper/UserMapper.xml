@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?><!--Converted at: Wed May 11 15:49:38 KST 2016 -->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lps.blockroad.mapper.UserMapper">
+
+	
+	<select id="userAuthHistLst" parameterType="com.lps.blockroad.vo.AuthUserVO" resultType="CamelMap">
+		SELECT X.LOGIN_ID
+			  ,X.AUTHOR_GRP_CODE
+			  ,Y.AUTHOR_GRP_NM
+			  ,X.HIST_SN
+			  ,X.USE_YN
+			  ,X.REGIST_ID
+			  ,X.REGIST_DT
+			  ,X.UPDT_ID
+			  ,X.UPDT_DT
+		  FROM TBSM_USER_AUTHOR_INFO_HIST X INNER JOIN TBSM_AUTHOR_GRP_INFO Y ON X.AUTHOR_GRP_CODE = Y.AUTHOR_GRP_CODE
+		 WHERE	   X.USER_ID = #{userId}
+	</select>
+
+	<select id="getUserLst" parameterType="com.lps.blockroad.vo.SrchCmsmVO" resultType="CamelMap">
+	<include refid="include.page_cnt_start" />
+		SELECT
+			   DISTINCT
+			   LOGIN_ID
+			  ,MEMBER_ID
+			  ,(SELECT MEMBER_NM FROM TBSM_MEMBER WHERE MEMBER_ID = X.MEMBER_ID) AS MEMBER_NM
+			  ,USER_ID
+			  ,USER_NM
+			  ,AUTHOR_GRAD_CODE
+			  ,(SELECT NVL(MAX(AUTHOR_GRP_CODE),'000') FROM TBSM_USER_AUTHOR_INFO WHERE USER_ID = X.USER_ID AND USE_YN ='Y') AUTHOR_GRP_CODE
+			  ,'초기화' as PASSWORD_INIT
+			  ,USE_YN
+			  ,REGIST_ID
+			  ,REGIST_DT
+			  ,UPDT_ID
+			  ,UPDT_DT
+			  ,LOGIN_ID AS TMP_LOGIN_ID
+		  FROM TBSM_USER X
+		 	<where>
+		 	<if test="srchMemberId != null and srchMemberId != ''">
+			MEMBER_ID = #{srchMemberId}
+			</if> 
+			  <!-- AND CERT_YN = 'Y' -->
+			  <!-- AND Y.DEPT_NM IS NOT NULL -->
+			<if test="srchUseYn != null and srchUseYn != ''">
+			AND X.USE_YN = #{srchUseYn}
+			</if>
+			<if test="srchAuthorGradCode != null and srchAuthorGradCode != ''">
+			AND X.AUTHOR_GRAD_CODE = #{srchAuthorGradCode}
+			</if>
+			<if test="srchValue != null and srchValue != ''">
+			AND ( upper(X.USER_NM) like '%'||upper(#{srchValue})||'%' or upper(X.LOGIN_ID) like '%'||upper(#{srchValue})||'%' )
+			</if>
+			</where>
+	   ORDER BY REGIST_DT DESC
+	   <include refid="include.page_cnt_end" />
+	</select>
+
+	<select id="getUserDtl" parameterType="com.lps.blockroad.vo.UserVO" resultType="com.lps.blockroad.vo.UserVO">
+		SELECT	A.*
+				,(SELECT ACCOUNT_NM FROM TBSM_ACCOUNT WHERE ACCOUNT_ID = A.ACCOUNT_ID) AS ACCOUNT_NM
+		  FROM	(
+		  		SELECT	X.MEMBER_ID
+		  				,B.MEMBER_NM
+		  				,B.REP_NM
+		  				,B.BIZ_REG_NO
+		  				,X.USER_ID
+		  				,X.LOGIN_ID
+		  				,X.USER_NM
+		  				,X.USER_PASSWORD
+		  				,X.AUTHOR_GRAD_CODE
+		  				,X.USE_YN
+		  				,X.REGIST_ID
+		  				,X.REGIST_DT
+		  				,X.UPDT_ID
+		  				,X.UPDT_DT
+		  				,X.PHONE
+		  				,X.EMAIL
+		  				,X.STATUS
+		  				,X.USER_CHK_KEY
+		  				,(SELECT PARNT_ID FROM TBSM_USER_MAPPING WHERE USER_ID = X.USER_ID) AS ACCOUNT_ID
+		  		  FROM	TBSM_USER X, TBSM_MEMBER B
+		  		 WHERE	1=1
+		  		 	AND	X.MEMBER_ID = B.MEMBER_ID
+		  		 	<if test="userId != null and userId != ''">
+						AND USER_ID = #{userId}
+					</if>
+					<if test="userChkKey != null and userChkKey != ''">
+						AND USER_CHK_KEY = #{userChkKey}
+					</if>
+					<if test="loginId != null and loginId != ''">
+						AND LOGIN_ID = #{loginId}
+					</if>
+		  ) A
+	</select>
+
+	<select id="getUserIdDtl" parameterType="com.lps.blockroad.vo.UserVO" resultType="com.lps.blockroad.vo.UserVO">
+		SELECT NVL(MAX(LOGIN_ID), 'null') AS LOGIN_ID,  NVL(MAX(user_nm), 'null') AS USER_NM
+      	 FROM TBSM_USER
+	     <where>
+	     		USE_YN = 'Y'
+	     		AND EMAIL= #{email}
+	     		AND USER_NM= #{userNm}
+	     </where>
+	</select>
+
+ 	<insert id="insUserDo" parameterType="com.lps.blockroad.vo.UserVO">
+		<selectKey resultType="string" keyProperty="userId" order="BEFORE">
+				SELECT 'usr' || TO_CHAR(SYSDATE, 'YYYY') || LPAD(NVL(Max(SUBSTR(USER_ID,8))+1,1),7,'0') FROM TBSM_USER WHERE TO_CHAR(SYSDATE, 'YYYY') = SUBSTR(USER_ID,4,4)
+		</selectKey>
+		INSERT INTO TBSM_USER (
+						 USER_ID
+						,MEMBER_ID
+                        ,LOGIN_ID
+                        ,USER_NM
+                        ,USER_PASSWORD
+                        ,AUTHOR_GRAD_CODE
+                        ,USE_YN
+                        ,REGIST_ID
+                        ,REGIST_DT
+                        ,UPDT_ID
+			  			,UPDT_DT
+			  			,PHONE
+			  			,EMAIL
+                        )
+			     VALUES (
+					      #{userId}
+					     ,#{memberId}
+					     ,#{loginId}
+					     ,#{userNm}
+					     ,#{userPassword}
+					     ,#{authorGradCode}
+					     ,'Y'
+					     ,NVL(#{registId},#{userId})
+					     ,sysdate
+					     ,NVL(#{registId},#{userId})
+			  			 ,sysdate
+			  			 ,#{phone}
+				  		 ,#{email}
+			     	)
+ 	</insert>
+
+ 	<insert id="insUserHistDo" parameterType="com.lps.blockroad.vo.UserVO">
+		/* Formatted on 2020-03-06 오후 1:39:30 (QP5 v5.252.13127.32867) */
+		INSERT INTO TBSM_USER_HIST
+				(
+				  LOGIN_ID
+				 ,USER_ID
+				 ,MEMBER_ID
+                 ,HIST_SN
+                 ,HIST_USER_NM
+                 ,HIST_PASSWORD
+                 ,HIST_AUTHOR_GRAD_CODE
+                 ,REGIST_ID
+                 ,REGIST_DT
+                 ,UPDT_ID
+                 ,UPDT_DT
+               )
+		VALUES ( #{loginId},
+				 #{userId},
+				 #{memberId},
+				 ( select nvl(max(HIST_SN),0)+1 from TBSM_USER_HIST),
+				 #{userNm},
+				 #{userPassword},
+				 #{authorGradCode},
+				 #{registId},
+				 sysdate,
+				 #{updtId},
+				sysdate )
+ 	</insert>
+
+ 	<update id="udtUsertDo" parameterType="com.lps.blockroad.vo.UserVO" >
+		UPDATE	TBSM_USER
+		SET	MEMBER_ID 			= #{memberId}
+			,LOGIN_ID 			= #{loginId}
+			,USER_NM 			= #{userNm}
+			,AUTHOR_GRAD_CODE 	= #{authorGradCode}
+			,USE_YN 			= #{useYn}
+			,UPDT_ID 			= #{updtId}
+			,UPDT_DT 			= sysdate
+		WHERE	USER_ID		= #{userId}
+ 	</update>
+
+ 	<update id="udtUsertPassDo" parameterType="com.lps.blockroad.vo.UserVO" >
+		UPDATE	TBSM_USER
+		SET	USER_PASSWORD = #{userPassword},
+			UPDT_ID = #{updtId},
+			UPDT_DT = sysdate
+		WHERE	USER_ID = #{userId}
+ 	</update>
+
+ 	 <update id="udtUserStopDo" parameterType="com.lps.blockroad.vo.UserVO" >
+		UPDATE	TBSM_USER
+		SET	USE_YN = #{useYn}
+			,UPDT_DT = sysdate
+		<where>
+			<choose>
+				<when test="userId != null and userId != ''">
+					AND	USER_ID = #{userId}
+				</when>
+				<when test="userIdArr != null and userIdArr.length > 0 ">
+					AND USER_ID IN
+					<foreach collection="userIdArr" item="userId" index="index" separator="," open="(" close=")">
+						#{userId}
+			        </foreach>
+				</when>
+			</choose>
+		</where>
+ 	</update>
+
+ 	<update id="udtLoginUserStopDo" parameterType="com.lps.blockroad.vo.UserVO" >
+		UPDATE	TBSM_USER
+		SET	USE_YN = 'N'
+			,UPDT_DT = sysdate
+		WHERE LOGIN_ID = #{loginId}
+ 	</update>
+
+ 	<delete id="delUserDo" parameterType="com.lps.blockroad.vo.UserVO" >
+		DELETE FROM TBSM_USER
+		WHERE	USER_ID = #{userId}
+ 	</delete>
+
+	<update id="usrInfoUdtDo" parameterType="com.lps.blockroad.vo.UserVO">
+		<!-- usrInfoUdtDo  이메일 인증 사용자 정보 갱신-->
+		UPDATE TBSM_USER
+		SET  USER_NM 			= #{userNm}
+			,LOGIN_ID 			= #{loginId}
+			,USER_PASSWORD 		= #{userPassword}
+			,PHONE 				= #{phone}
+			,EMAIL				= #{email}
+			,AUTHOR_GRAD_CODE 	= #{authorGradCode}
+			,UPDT_ID 			= #{userNm}
+			,UPDT_DT 			= sysdate
+			,STATUS 			= '002'
+			,STATUS_UPDT_DT		= SYSDATE	
+			,USER_CHK_KEY		= ''
+		WHERE USER_ID	= #{userId}
+	</update>
+
+
+	<update id="usrInfoPwUdtDo" parameterType="com.lps.blockroad.vo.UserVO">
+		<!-- usrInfoPwUdtDo  이메일 인증 사용자 패스워드 갱신-->
+		UPDATE TBSM_USER
+		SET  USER_PASSWORD 	= #{userPassword}
+			,USER_CHK_KEY   = ''
+		WHERE USER_CHK_KEY	= #{userChkKey}
+	</update>
+
+</mapper>

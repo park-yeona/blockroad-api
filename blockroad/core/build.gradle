@@ -1,0 +1,30 @@
+
+plugins {
+	id 'org.springframework.boot' version '2.7.1'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+}
+
+group = 'com.lps'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.0'
+	implementation group: 'org.springframework.cloud', name: 'spring-cloud-starter-openfeign', version: '3.1.1'
+//	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+	compileOnly('org.projectlombok:lombok')
+	annotationProcessor 'org.projectlombok:lombok'
+	
+	// implementation group: 'org.springframework.cloud', name: 'spring-cloud-starter-netflix-ribbon', version: '2.2.9.RELEASE'
+	implementation group: 'org.bgee.log4jdbc-log4j2', name: 'log4jdbc-log4j2-jdbc4.1', version: '1.16'
+      
+ //	implementation group: 'org.springframework.cloud', name: 'spring-cloud-loadbalancer', version: '3.1.1'		
+}
